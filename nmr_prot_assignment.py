@@ -3,10 +3,7 @@ import pandas as pd
 from Bio.Data.IUPACData import protein_letters_3to1
 import logging
 import os
-import multiprocessing
-from functools import partial
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
 import numpy as np
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "WARNING"))
@@ -103,6 +100,7 @@ class Protein_Entry:
                     tmp_df1["Atom_ID"].isin(["CA", "CB", "C"])
                 )
                 tmp_df1.loc[mask, "Atom_ID"] = "p" + tmp_df1.loc[mask, "Atom_ID"]
+                tmp_df1.loc[mask, "Comp_index_ID"] = residue
 
                 df_list.append(tmp_df1)
 
@@ -113,11 +111,6 @@ class Protein_Entry:
         self.assignment["Atom_ID_encoded"] = self.assignment["Atom_ID"].map(
             atom_id_encode_dict
         )
-
-    def encode_sequence_from_assignment(self):
-        self.assignment["sequence_from_assignment_encoded"] = self.assignment[
-            "sequence_from_assignment"
-        ].apply(lambda x: [ord(letter) - ord("A") + 1 for letter in x])
 
     def get_dummy_comp_id(self):
         # create a dummy residue variable
@@ -149,16 +142,14 @@ def process_protein(protein_id):
         protein.get_assignment()
         protein.remove_unwanted_atom_types_from_assignment()
 
-        # Get assignments and print out to dataframes
+        # Get Sequences and print out to dataframes
         protein.assignment["sequence_from_bmrb"] = protein.get_sequence_from_bmrb()
         protein.assignment[
             "sequence_from_assignment"
         ] = protein.get_sequence_from_assignment()
-        protein.encode_sequence_from_assignment()
 
-        # Calculate anonymised assignment
+        # Calculate anonymised assignment and assign a dummy residue value
         protein.get_anonymised_assignment()
-        protein.encode_atom_id()
         protein.get_dummy_comp_id()
 
         return protein
@@ -198,43 +189,40 @@ def build_assignments_csvs_parallel():
 
     # Create a single dataframe and write to csv for both assignment and anonymised assignment
     all_assignments_df = pd.concat(all_assignments_list)
+
+    # Reorder column order and save to disk
+    all_assignments_df = all_assignments_df[
+        [
+            "Entry_ID",
+            "Comp_index_ID",
+            "Comp_ID",
+            "Comp_ID_sl",
+            "Atom_ID",
+            "Val",
+            "sequence_from_assignment",
+            "sequence_from_bmrb",
+        ]
+    ]
     all_assignments_df.to_csv("All_Assignments.csv")
 
+    # Repeat for Anonymised Assignment
     all_anonymised_assignments_df = pd.concat(all_anonymised_assignments_list)
+
+    # Reorder column order and save to disk
+    all_anonymised_assignments_df = all_anonymised_assignments_df[
+        [
+            "Entry_ID",
+            "Comp_index_ID",
+            "Dummy_Comp_index_ID",
+            "Comp_ID",
+            "Comp_ID_sl",
+            "Atom_ID",
+            "Val",
+            "sequence_from_assignment",
+            "sequence_from_bmrb",
+        ]
+    ]
     all_anonymised_assignments_df.to_csv("All_Anonymised_Assignments.csv")
-
-
-def generate_random_residue_value(group):
-    """
-    Generate a random dummy residue value
-    """
-    unique_values_y = group["Comp_index_ID"].unique()
-    random_numbers = np.random.choice(
-        range(len(unique_values_y)), size=len(unique_values_y), replace=False
-    )
-    random_mapping = dict(zip(unique_values_y, random_numbers))
-    return group["Comp_index_ID"].map(random_mapping)
-
-
-def get_model_inputs_from_anonymised_assignments_df(anon_assignments_df):
-    return anon_assignments_df.groupby("Entry_ID").agg(
-        {
-            "sequence_from_assignment_encoded": "first",
-            "Atom_ID_encoded": lambda x: list(x),
-            "Val": lambda x: list(x),
-            "Comp_index_ID": lambda x: list(x),
-        }
-    )
-
-
-def get_model_outputs_from_assignment_df(assignments_df):
-    return assignments_df.groupby("Entry_ID").agg(
-        {
-            "sequence_from_assignment_encoded": "first",
-            "Atom_ID_encoded": lambda x: list(x),
-            "Val": lambda x: list(x),
-        }
-    )
 
 
 if __name__ == "__main__":
