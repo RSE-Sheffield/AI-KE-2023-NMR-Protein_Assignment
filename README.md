@@ -38,13 +38,13 @@ These are the steps nmr_prot_assignment.py performs:
 
 The columns for the output csv files are:
 
-Index
-*Entry_ID* - BMRB entry id
-*Comp_index_ID* - Residue Number
-*Dummy_Comp_index* - Dummy Residue Number
-*Comp_ID* - Three letter Amino Acid
-*Comp_ID_sl* - Single Letter Amino Acid
-*Atom_ID* - Atom Name
-*Val* - Chemical Shift
-*sequence_from_assignment* - Sequence derived from assignment
-*sequence_from_bmrb* - Sequence from BMRB
+- *Index*
+- *Entry_ID* - BMRB entry id
+- *Comp_index_ID* - Residue Number
+- *Dummy_Comp_index* - Dummy Residue Number
+- *Comp_ID* - Three letter Amino Acid
+- *Comp_ID_sl* - Single Letter Amino Acid
+- *Atom_ID* - Atom Name
+- *Val* - Chemical Shift
+- *sequence_from_assignment* - Sequence derived from assignment
+- *sequence_from_bmrb* - Sequence from BMRB
